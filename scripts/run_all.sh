@@ -19,7 +19,7 @@ fi
 echo "[2/2] Launching AegisAgent Unified Server at http://127.0.0.1:8000 ..."
 echo "      - Dashboard UI: http://127.0.0.1:8000"
 echo "      - Swagger Docs: http://127.0.0.1:8000/docs"
-echo "      - Lab Target Simulator: http://127.0.0.1:8000/sim/portal"
+echo "      - Lab Target Simulator: http://127.0.0.1:8000/sim/api/health"
 echo ""
 echo "Press Ctrl+C to terminate."
 echo "================================================================="

@@ -43,7 +43,7 @@
 * **Interactive Manifest Upload & Drag-and-Drop:** Allows users and evaluators to interactively drag & drop or upload any custom `docker-compose.yml` directly from the web interface or via `POST /api/topology/upload`. The engine dynamically resets and rebuilds the attack graph in real time without needing a server restart.
 * **AST Parsing & Model Extraction:** Parses `docker-compose.yml` into strongly-typed Pydantic v2 models (`ServiceNode`, `TopologyGraph`).
 * **Heuristic Attack Surface Classification:**
-  * Categorizes containers into distinct security roles: **LLM Agent** (`meridian-chatbot`), **REST API** (`meridian-api`), **Web Portal** (`meridian-web`), **Cloud Metadata** (`meridian-cloud-meta`), and **Directory Services** (`meridian-dc`).
+  * Categorizes containers into distinct security roles: **LLM Agent** (e.g. `chatbot`, `ai-agent`), **REST API** (e.g. `api-service`, `backend`), **Web Application**, **Cloud Metadata**, and **Directory Services** (e.g. `dc-auth`).
   * Maps ingress ports (`80`, `8081`, `8082`), internal subnets (`10.10.20.0/24`), and isolated pivot destinations (`10.10.20.80`).
 
 ### B. Autonomous ReAct Loop (`ReActSecurityAgent`)
@@ -83,14 +83,13 @@ Unverified agent detections are strictly quarantined from executive reporting to
 
 ## 3. Bundled Vulnerable Target Lab Simulator
 
-To enable instant, zero-docker evaluation in under 60 seconds, AegisAgent includes an embedded vulnerable target lab simulator (`/sim`) replicating the Meridian Health Systems environment:
+To enable instant, zero-docker evaluation in under 60 seconds, AegisAgent includes an embedded vulnerable target lab simulator (`/sim`):
 
 | Service | Port / Path | Vulnerability Demonstrated | Severity / CVSS |
 | :--- | :--- | :--- | :--- |
-| **meridian-chatbot** | `POST /sim/chatbot/chat` | **LLM Prompt Injection & System Directive Exfiltration** (Leaking physician secrets & canary token reflection) | **CRITICAL (9.3)** |
-| **meridian-api** | `POST /sim/api/patients/query` | **NoSQL Operator Query Injection** (`{"username": {"$ne": null}}` exposing confidential medical records) | **HIGH (8.6)** |
-| **meridian-web** | `GET /sim/portal/labresult?url=...` | **Server-Side Request Forgery (SSRF)** (Pivoting into `10.10.20.80` and extracting AWS IAM credentials) | **HIGH (8.6)** |
-| **meridian-dc** | `ldap://10.10.20.60:389` | **Active Directory Domain Controller** (Internal pivot asset cataloged in topology graph) | **INFO** |
+| **ai-assistant** | `POST /sim/chatbot/chat` | **LLM Prompt Injection & System Directive Exfiltration** (Leaking internal secrets & canary token reflection) | **CRITICAL (9.3)** |
+| **api-service** | `POST /sim/api/patients/query` | **NoSQL Operator Query Injection** (`{"username": {"$ne": null}}` exposing unauthenticated records) | **HIGH (8.6)** |
+| **directory-service** | `ldap://10.10.20.60:389` | **Active Directory Domain Controller** (Internal pivot asset cataloged in topology graph) | **INFO** |
 
 ---
 

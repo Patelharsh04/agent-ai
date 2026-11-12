@@ -5,7 +5,8 @@ from ..models.schemas import ServiceNode, TopologyGraph, TargetType
 
 class ComposeParser:
     """Parses docker-compose.yml to reconstruct attack topology and target attack surfaces."""
-    
+
+ #this method parses a docker-compose.yml file from the given file path and returns a TopologyGraph object.   
     @staticmethod
     def parse_file(file_path: str) -> TopologyGraph:
         if not os.path.exists(file_path):
@@ -15,7 +16,9 @@ class ComposeParser:
             content = f.read()
             
         return ComposeParser.parse_yaml_str(content, source_name=os.path.basename(file_path))
-
+    
+#this method parses a docker-compose.yml content string and returns a TopologyGraph object. 
+#It extracts service definitions, ports, networks, environment variables, and classifies services into target types with associated attack surfaces.
     @staticmethod
     def parse_yaml_str(yaml_content: str, source_name: str = "uploaded-docker-compose.yml") -> TopologyGraph:
         try:
@@ -97,12 +100,17 @@ class ComposeParser:
                         if isinstance(c, dict) and "subnet" in c:
                             subnets.append(c["subnet"])
                             
+        if not subnets and isinstance(networks_section, dict) and networks_section:
+            subnets = list(networks_section.keys())
+        elif not subnets:
+            subnets = ["bridge"]
+            
         total_entry = sum(1 for s in discovered_services if s.host_port is not None)
         
         return TopologyGraph(
             source_file=source_name,
             services=discovered_services,
-            subnets=subnets if subnets else ["10.10.20.0/24"],
+            subnets=subnets,
             total_entrypoints=total_entry
         )
 

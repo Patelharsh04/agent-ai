@@ -35,17 +35,13 @@ app.add_middleware(
 # Mount the simulated vulnerable environment directly at /sim
 app.mount("/sim", lab_app)
 
-# Active parsed topology (loads bundled docker-compose.yml if present, otherwise starts clean awaiting upload)
-COMPOSE_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "docker-compose.yml"))
-if os.path.exists(COMPOSE_PATH):
-    active_topology = ComposeParser.parse_file(COMPOSE_PATH)
-else:
-    active_topology = TopologyGraph(
-        source_file="No manifest uploaded yet",
-        services=[],
-        subnets=[],
-        total_entrypoints=0
-    )
+# Active parsed topology (initialized empty on server startup — dynamically populated when user uploads a file)
+active_topology = TopologyGraph(
+    source_file="No manifest uploaded yet",
+    services=[],
+    subnets=[],
+    total_entrypoints=0
+)
 agent = ReActSecurityAgent(target_base_url="http://127.0.0.1:8000/sim")
 
 @app.get("/api/health")
@@ -56,7 +52,8 @@ async def health_check():
         "author": settings.AUTHOR,
         "configured_llm": {
             "model": settings.LLM_MODEL,
-            "thinking_mode": settings.LLM_THINKING_MODE
+            "thinking_mode": settings.LLM_THINKING_MODE,
+            "has_api_key": bool(settings.OPENAI_API_KEY and len(settings.OPENAI_API_KEY) > 10)
         },
         "topology_file": active_topology.source_file,
         "discovered_services": len(active_topology.services),
@@ -75,11 +72,14 @@ async def upload_topology(
     global active_topology
     content = ""
     filename = "uploaded-docker-compose.yml"
-    
+
+#this function handles the upload of a docker-compose.yml file or JSON payload containing the content and filename. 
+#It parses the content to reconstruct the attack topology and updates the active topology. 
+#It also emits an event to notify subscribers of the new topology upload.
     if file:
         raw_bytes = await file.read()
         content = raw_bytes.decode("utf-8")
-        filename = file.filename or filename
+        filename = file.filename or filename     
     elif request:
         try:
             body = await request.json()
@@ -87,10 +87,16 @@ async def upload_topology(
             filename = body.get("filename", filename)
         except Exception:
             pass
-            
+
+#this check ensures that the uploaded content is not empty. 
+#If it is, a 400 Bad Request response is returned with an error message indicating that an empty compose file was received.         
     if not content.strip():
         return JSONResponse(status_code=400, content={"error": "Empty compose file received."})
-        
+
+    
+#this block attempts to parse the uploaded content using the ComposeParser.
+#If successful, it updates the active topology, clears any previous run state, and emits an event notifying subscribers of the new topology upload. 
+#If parsing fails, a 400 Bad Request response is returned with an error message indicating the failure reason.        
     try:
         new_topology = ComposeParser.parse_yaml_str(content, source_name=filename)
         active_topology = new_topology
@@ -119,7 +125,8 @@ async def upload_topology(
         }
     except Exception as e:
         return JSONResponse(status_code=400, content={"error": f"Failed to parse compose file: {str(e)}"})
-
+    
+#this endpoint starts the autonomous security testing agent in the background.
 @app.post("/api/scan/start")
 async def start_scan(background_tasks: BackgroundTasks):
     if agent.is_scanning:
@@ -130,6 +137,7 @@ async def start_scan(background_tasks: BackgroundTasks):
     background_tasks.add_task(agent.run_scan, active_topology)
     return {"status": "STARTED", "message": "Autonomous security testing agent launched"}
 
+#this endpoint provides a Server-Sent Events (SSE) stream for clients to receive real-time updates from the autonomous security testing agent.
 @app.get("/api/scan/stream")
 async def sse_event_stream(request: Request):
     last_event_id = request.headers.get("Last-Event-ID")
@@ -162,11 +170,13 @@ async def sse_event_stream(request: Request):
         }
     )
 
+#this endpoint lists all triage findings, optionally filtered by status.
 @app.get("/api/triage")
 async def list_triage_findings(status: str = Query(None)):
     filter_status = FindingStatus(status) if status else None
     return triage_service.list_findings(filter_status)
 
+#this endpoint retrieves a specific triage finding by its ID.
 @app.post("/api/triage/{finding_id}")
 async def update_triage_finding(finding_id: str, update: TriageUpdateRequest):
     updated = triage_service.update_triage(finding_id, update)
@@ -174,11 +184,13 @@ async def update_triage_finding(finding_id: str, update: TriageUpdateRequest):
         return JSONResponse(status_code=404, content={"error": f"Finding {finding_id} not found"})
     return updated
 
+#this endpoint generates a CISO report based on the current findings in the triage service.
 @app.get("/api/ciso/report")
 async def get_ciso_report():
     findings = triage_service.list_findings()
     return CisoReporter.generate_report(findings)
 
+#this endpoint generates a SARIF (Static Analysis Results Interchange Format) export of the approved or active findings in the triage service.
 @app.get("/api/ciso/sarif")
 async def get_sarif_export():
     findings = triage_service.list_findings()

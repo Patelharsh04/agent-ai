@@ -72,6 +72,6 @@ Every agent decision—including hypothesis generation, payload mutation, target
 
 1. **Backend Foundation:** FastAPI asynchronous backend exposing REST endpoints for scan management and an SSE endpoint for live event streaming.
 2. **Frontend Architecture:** React 19 single-page application (Vite, TailwindCSS) with modular views for Live Topology/Stream, HITL Triage Queue, and CISO Executive Dashboard.
-3. **Target Scope:** Focus dynamic probing on `meridian-web` (port 80), `meridian-api` (port 8081), and `meridian-chatbot` (port 8082), while treating `meridian-cloud-meta` as an SSRF destination.
+3. **Target Scope:** Dynamic multi-target probing across any uploaded Docker Compose services (LLM agents, REST APIs, and directory services), dynamically adapting probe payloads to discovered container attack surfaces.
 4. **Handoff Target:** Ready for formal specification initialization via `/egm-draft` or publication as an RFC.
 

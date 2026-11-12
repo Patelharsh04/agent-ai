@@ -38,14 +38,14 @@ class ServiceNode(BaseModel):
     container_port: Optional[int] = None
     ipv4_address: Optional[str] = None
     hostname: Optional[str] = None
-    network: Optional[str] = "meridian-net"
+    network: Optional[str] = "default"
     environment: Dict[str, str] = Field(default_factory=dict)
     attack_surfaces: List[str] = Field(default_factory=list)
     status: str = "DISCOVERED"
 
 class TopologyGraph(BaseModel):
-    source_file: str = "docker-compose.yml"
-    services: List[ServiceNode]
+    source_file: str = "No manifest uploaded yet"
+    services: List[ServiceNode] = Field(default_factory=list)
     subnets: List[str] = Field(default_factory=list)
     total_entrypoints: int = 0
 
