@@ -18,7 +18,7 @@ if (Test-Path ".\.venv\Scripts\Activate.ps1") {
 Write-Host "[2/2] Launching AegisAgent Unified Server at http://127.0.0.1:8000 ..." -ForegroundColor Green
 Write-Host "      - Dashboard UI: http://127.0.0.1:8000" -ForegroundColor Cyan
 Write-Host "      - Swagger Docs: http://127.0.0.1:8000/docs" -ForegroundColor Cyan
-Write-Host "      - Lab Target Simulator: http://127.0.0.1:8000/sim/portal" -ForegroundColor Cyan
+Write-Host "      - Lab Target Simulator: http://127.0.0.1:8000/sim/api/health" -ForegroundColor Cyan
 Write-Host ""
 Write-Host "Press Ctrl+C to terminate." -ForegroundColor Gray
 Write-Host "=================================================================" -ForegroundColor Cyan

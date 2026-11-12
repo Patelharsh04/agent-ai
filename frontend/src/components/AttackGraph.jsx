@@ -223,7 +223,19 @@ export default function AttackGraph({ topology, onStartScan, isScanning, onTopol
             Active Target Attack Topology
           </h2>
           <p style={{ fontSize: '0.875rem', color: '#64748b', marginTop: '4px' }}>
-            Active Manifest: <code style={{ color: '#0284c7', background: '#f1f5f9', padding: '2px 6px', borderRadius: '4px', fontWeight: '600' }}>{topology.source_file}</code> — Subnet: <span style={{ color: '#0f172a', fontWeight: '600' }}>{topology.subnets[0]}</span> ({topology.services.length} services mapped)
+            {topology.services && topology.services.length > 0 ? (
+              <>
+                Active Manifest: <code style={{ color: '#0284c7', background: '#f1f5f9', padding: '2px 6px', borderRadius: '4px', fontWeight: '600' }}>{topology.source_file}</code>
+                {topology.subnets && topology.subnets.length > 0 && (
+                  <> — Subnet: <span style={{ color: '#0f172a', fontWeight: '600' }}>{topology.subnets[0]}</span></>
+                )}
+                {' '}({topology.services.length} services mapped)
+              </>
+            ) : (
+              <span style={{ color: '#64748b' }}>
+                No active manifest loaded — upload a <code style={{ color: '#0284c7', background: '#f1f5f9', padding: '2px 6px', borderRadius: '4px', fontWeight: '600' }}>docker-compose.yml</code> above to initialize topology
+              </span>
+            )}
           </p>
         </div>
         <button

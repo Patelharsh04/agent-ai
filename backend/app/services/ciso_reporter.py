@@ -62,48 +62,53 @@ class CisoReporter:
         # Remediation Roadmap
         roadmap: List[RoadmapItem] = []
         
+        prompt_services = list(dict.fromkeys([f.service for f in active_findings if "LLM" in f.owasp_category]))
         if has_prompt_injection or has_sensitive_leak:
             roadmap.append(RoadmapItem(
                 priority=1,
                 timeframe="Immediate (0 - 7 Days)",
                 title="Deploy NeMo Guardrails & Purge Model Directives",
-                description="Harden MediBot assistant with structural role separation, canary checks, and remove hardcoded DB credentials from system prompts.",
-                affected_services=["meridian-chatbot"],
+                description="Harden conversational agents with structural role separation, canary checks, and remove hardcoded credentials from system prompts.",
+                affected_services=prompt_services or ["ai-assistant"],
                 effort="Medium (2 Days)",
                 impact="Critical (Mitigates full LLM takeover)"
             ))
             
         if has_ssrf:
+            ssrf_services = list(dict.fromkeys([f.service for f in active_findings if "A10" in f.owasp_category]))
             roadmap.append(RoadmapItem(
                 priority=2,
                 timeframe="Immediate (0 - 7 Days)",
                 title="Enforce SSRF Network Boundaries & IMDSv2",
-                description="Implement strict domain whitelisting on /portal/labresult and drop outbound traffic to 10.10.20.0/24 and cloud metadata addresses.",
-                affected_services=["meridian-web", "meridian-cloud-meta"],
+                description="Implement strict domain whitelisting on external URL parameters and drop outbound traffic to cloud metadata addresses.",
+                affected_services=ssrf_services or ["web-service"],
                 effort="Low (1 Day)",
                 impact="High (Blocks cloud credential theft)"
             ))
             
+        injection_services = list(dict.fromkeys([f.service for f in active_findings if "A03" in f.owasp_category]))
         if has_injection:
             roadmap.append(RoadmapItem(
                 priority=3,
                 timeframe="Medium-Term (8 - 30 Days)",
                 title="Pydantic Schema Validation on API Endpoints",
-                description="Cast all JSON query fields to primitive strings and reject MongoDB query operators ($ne, $gt, $regex) at ingress.",
-                affected_services=["meridian-api"],
+                description="Cast all JSON query fields to primitive strings and reject database query operators ($ne, $gt, $regex) at ingress.",
+                affected_services=injection_services or ["api-service"],
                 effort="Low (1 Day)",
-                impact="High (Prevents complete patient record exfiltration)"
+                impact="High (Prevents unauthenticated record exfiltration)"
             ))
             
-        roadmap.append(RoadmapItem(
-            priority=4,
-            timeframe="Long-Term (30+ Days)",
-            title="Active Directory Domain Controller Hardening",
-            description="Enforce SMB signing on DC01, disable Kerberos RC4-HMAC ciphers, and isolate LDAP from unauthenticated access.",
-            affected_services=["meridian-dc"],
-            effort="High (1-2 Weeks)",
-            impact="Medium (Hardens internal pivot resistance)"
-        ))
+        has_directory = any("DIRECTORY" in f.title.upper() or "LDAP" in f.title.upper() for f in active_findings)
+        if has_directory:
+            roadmap.append(RoadmapItem(
+                priority=4,
+                timeframe="Long-Term (30+ Days)",
+                title="Active Directory Domain Controller Hardening",
+                description="Enforce SMB signing, disable Kerberos RC4-HMAC ciphers, and isolate LDAP from unauthenticated access.",
+                affected_services=["directory-service"],
+                effort="High (1-2 Weeks)",
+                impact="Medium (Hardens internal pivot resistance)"
+            ))
         
         return CisoReport(
             title="AegisAgent CISO Threat Posture & Remediation Report",

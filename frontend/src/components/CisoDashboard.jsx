@@ -250,7 +250,12 @@ export default function CisoDashboard({ report }) {
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          {report.remediation_roadmap.map((item) => (
+          {report.remediation_roadmap.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '1.5rem', color: '#64748b', fontSize: '13px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+              No active security defects detected. Remediation roadmap items will populate dynamically after a scan completes.
+            </div>
+          ) : (
+            report.remediation_roadmap.map((item) => (
             <div
               key={item.priority}
               style={{
@@ -299,7 +304,7 @@ export default function CisoDashboard({ report }) {
                 <span style={{ color: '#64748b' }}>Impact: <strong style={{ color: '#0284c7' }}>{item.impact}</strong></span>
               </div>
             </div>
-          ))}
+          )))}
         </div>
       </div>
     </div>

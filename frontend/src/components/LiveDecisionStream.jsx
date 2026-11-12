@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Terminal, Cpu, Play, Pause, Trash2, Filter, AlertCircle, CheckCircle2, ShieldCheck, Zap } from 'lucide-react';
 
-export default function LiveDecisionStream({ events, isScanning, onClearEvents, onStartScan, hasTopology }) {
+export default function LiveDecisionStream({ events, isScanning, onClearEvents, onStartScan, hasTopology, modelInfo }) {
   const [isPaused, setIsPaused] = useState(false);
   const [filterPhase, setFilterPhase] = useState('ALL');
   const terminalEndRef = useRef(null);
@@ -65,8 +65,21 @@ export default function LiveDecisionStream({ events, isScanning, onClearEvents, 
               fontFamily: 'monospace',
               fontWeight: '700'
             }}>
-              gpt-6-luna [xhigh thinking]
+              {modelInfo?.model || 'gpt-6-luna'} [{modelInfo?.thinking_mode || 'xhigh thinking'}]
             </code>
+            {modelInfo?.has_api_key && (
+              <span style={{
+                fontSize: '10px',
+                background: '#ecfdf5',
+                color: '#059669',
+                padding: '2px 6px',
+                borderRadius: '4px',
+                border: '1px solid #a7f3d0',
+                fontWeight: '700'
+              }}>
+                LIVE OPENAI API
+              </span>
+            )}
           </div>
 
           <div style={{

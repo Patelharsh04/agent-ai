@@ -29,6 +29,7 @@ class ReActSecurityAgent:
         
         try:
             # 1. Global Recon Event
+            subnet_desc = f"across network '{topology.subnets[0]}'" if topology.subnets else "across container networks"
             await broadcaster.emit(AgentEvent(
                 event_id=f"EVT-{uuid.uuid4().hex[:8]}",
                 phase=EventPhase.RECON,
@@ -37,10 +38,10 @@ class ReActSecurityAgent:
                 target_url=topology.source_file,
                 thought=(
                     f"Parsed infrastructure manifest '{topology.source_file}'. Identified {len(topology.services)} services "
-                    f"across subnet {topology.subnets[0]}. Initiating autonomous attack sequence."
+                    f"{subnet_desc}. Initiating autonomous attack sequence."
                 ),
                 action="Parse YAML AST and categorize attack surfaces.",
-                observation=f"Discovered {topology.total_entrypoints} exposed ingress points and 1 internal cloud metadata node.",
+                observation=f"Discovered {topology.total_entrypoints} exposed ingress points across {len(topology.services)} mapped service nodes.",
                 decision="Begin autonomous probe dispatch against discovered high-risk targets."
             ))
             
@@ -48,9 +49,10 @@ class ReActSecurityAgent:
                 for service in topology.services:
                     await asyncio.sleep(1.0) # Ergonomic pacing for real-time visualization
                     
-                    # ─── Target: meridian-chatbot (LLM Agent) ──────────────────────
+                    # ─── Target: LLM Agent Container ──────────────────────────────
                     if service.target_type.value == "LLM_AGENT":
                         plan = await self.llm.reason_and_plan(service.name, service.target_type.value, service.attack_surfaces)
+                        model_tag = f"OpenAI {self.llm.last_model_used}" if self.llm.last_model_used else f"{self.llm.model} | {self.llm.thinking_mode}"
                         
                         await broadcaster.emit(AgentEvent(
                             event_id=f"EVT-{uuid.uuid4().hex[:8]}",
@@ -58,7 +60,7 @@ class ReActSecurityAgent:
                             service=service.name,
                             probe_type="LLM_PROMPT_INJECTION_HYPOTHESIS",
                             target_url=f"{self.target_base_url}/chatbot/chat",
-                            thought=f"[{self.llm.model} | {self.llm.thinking_mode}] {plan['thought']}",
+                            thought=f"[{model_tag}] {plan['thought']}",
                             action="Formulate multi-stage jailbreak with unique cryptographic canary token.",
                             observation="Endpoint is responsive on HTTP POST /chatbot/chat.",
                             decision="Dispatch Canary System Prompt Exfiltration probe."
@@ -66,7 +68,7 @@ class ReActSecurityAgent:
                         
                         await asyncio.sleep(1.2)
                         
-                        is_vuln, req, resp, canary, finding = await SecurityProbes.probe_llm_prompt_injection(self.target_base_url, http_client)
+                        is_vuln, req, resp, canary, finding = await SecurityProbes.probe_llm_prompt_injection(self.target_base_url, http_client, service_name=service.name)
                         
                         if is_vuln and finding:
                             triage_service.add_finding(finding)
@@ -83,9 +85,10 @@ class ReActSecurityAgent:
                                 finding_id=finding.id
                             ))
                             
-                    # ─── Target: meridian-api (Internal NoSQL API) ─────────────────
+                    # ─── Target: REST API Container ───────────────────────────────
                     elif service.target_type.value == "REST_API":
                         plan = await self.llm.reason_and_plan(service.name, service.target_type.value, service.attack_surfaces)
+                        model_tag = f"OpenAI {self.llm.last_model_used}" if self.llm.last_model_used else f"{self.llm.model} | {self.llm.thinking_mode}"
                         
                         await broadcaster.emit(AgentEvent(
                             event_id=f"EVT-{uuid.uuid4().hex[:8]}",
@@ -93,7 +96,7 @@ class ReActSecurityAgent:
                             service=service.name,
                             probe_type="NOSQL_INJECTION_HYPOTHESIS",
                             target_url=f"{self.target_base_url}/api/patients/query",
-                            thought=f"[{self.llm.model} | {self.llm.thinking_mode}] {plan['thought']}",
+                            thought=f"[{model_tag}] {plan['thought']}",
                             action="Construct MongoDB operator injection payload ({'$ne': null}).",
                             observation="Endpoint accepts JSON payloads without Content-Type enforcement.",
                             decision="Execute unauthenticated NoSQL operator fuzzing."
@@ -101,7 +104,7 @@ class ReActSecurityAgent:
                         
                         await asyncio.sleep(1.2)
                         
-                        is_vuln, req, resp, finding = await SecurityProbes.probe_nosql_injection(self.target_base_url, http_client)
+                        is_vuln, req, resp, finding = await SecurityProbes.probe_nosql_injection(self.target_base_url, http_client, service_name=service.name)
                         
                         if is_vuln and finding:
                             triage_service.add_finding(finding)
@@ -118,42 +121,24 @@ class ReActSecurityAgent:
                                 finding_id=finding.id
                             ))
 
-                    # ─── Target: meridian-web (Patient Portal / SSRF) ──────────────
+                    # ─── Target: Dynamic Web Application Ingress ──────────────────
                     elif service.target_type.value == "WEB_PORTAL":
                         plan = await self.llm.reason_and_plan(service.name, service.target_type.value, service.attack_surfaces)
+                        model_tag = f"OpenAI {self.llm.last_model_used}" if self.llm.last_model_used else f"{self.llm.model} | {self.llm.thinking_mode}"
                         
                         await broadcaster.emit(AgentEvent(
                             event_id=f"EVT-{uuid.uuid4().hex[:8]}",
                             phase=EventPhase.HYPOTHESIS,
                             service=service.name,
-                            probe_type="SSRF_METADATA_HYPOTHESIS",
-                            target_url=f"{self.target_base_url}/portal/labresult",
-                            thought=f"[{self.llm.model} | {self.llm.thinking_mode}] {plan['thought']}",
-                            action="Craft URL parameter pointing to internal cloud metadata simulator at 10.10.20.80.",
-                            observation="Web portal accepts external URL query parameters without RFC 1918 filtering.",
-                            decision="Execute SSRF pivot test to extract IAM credentials."
+                            probe_type="WEB_SURFACE_DISCOVERY",
+                            target_url=f"http://127.0.0.1:{service.host_port or 80}",
+                            thought=f"[{model_tag}] {plan['thought']}",
+                            action=f"Analyze exposed HTTP ingress surface for container '{service.name}'.",
+                            observation=f"Service '{service.name}' mapped on port {service.host_port or 80}. Entrypoints active.",
+                            decision="Cataloged web ingress in dynamic attack graph."
                         ))
-                        
-                        await asyncio.sleep(1.2)
-                        
-                        is_vuln, req, resp, finding = await SecurityProbes.probe_ssrf_metadata(self.target_base_url, http_client)
-                        
-                        if is_vuln and finding:
-                            triage_service.add_finding(finding)
-                            await broadcaster.emit(AgentEvent(
-                                event_id=f"EVT-{uuid.uuid4().hex[:8]}",
-                                phase=EventPhase.DECISION,
-                                service=service.name,
-                                probe_type="SSRF_METADATA_VERDICT",
-                                target_url=finding.target_url,
-                                thought="Web portal acted as an open proxy into internal cloud network, returning temporary IAM credentials.",
-                                action=f"GET {finding.target_url}?url=http://10.10.20.80/...",
-                                observation=f"HTTP {resp.get('status_code')} — AWS SecretAccessKey and role credentials extracted.",
-                                decision="Confirmed HIGH-severity SSRF. Staged in HITL Triage Queue.",
-                                finding_id=finding.id
-                            ))
                             
-                    # ─── Target: meridian-dc (Active Directory) ────────────────────
+                    # ─── Target: Directory Service / Identity Provider ────────────
                     elif service.target_type.value == "DIRECTORY_SERVICE":
                         await broadcaster.emit(AgentEvent(
                             event_id=f"EVT-{uuid.uuid4().hex[:8]}",

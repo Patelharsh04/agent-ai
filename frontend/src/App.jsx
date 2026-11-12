@@ -21,6 +21,7 @@ export default function App() {
   const [findings, setFindings] = useState([]);
   const [cisoReport, setCisoReport] = useState(null);
   const [isScanning, setIsScanning] = useState(false);
+  const [modelInfo, setModelInfo] = useState({ model: 'gpt-6-luna', thinking_mode: 'xhigh', has_api_key: false });
 
   // Load initial data
   const loadData = async () => {
@@ -36,6 +37,9 @@ export default function App() {
       setCisoReport(report);
       if (health && typeof health.is_scanning === 'boolean') {
         setIsScanning(health.is_scanning);
+      }
+      if (health && health.configured_llm) {
+        setModelInfo(health.configured_llm);
       }
     } catch (err) {
       console.error('Failed to load initial data:', err);
@@ -340,6 +344,7 @@ export default function App() {
             onClearEvents={() => setEvents([])}
             onStartScan={handleStartScan}
             hasTopology={Boolean(topology && topology.services && topology.services.length > 0)}
+            modelInfo={modelInfo}
           />
         )}
 
