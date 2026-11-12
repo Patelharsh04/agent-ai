@@ -72,7 +72,7 @@ class LLMClient:
                     
                 try:
                     print(f"[AegisAgent LLM] Dispatching live API call to OpenAI ({target_model}) for '{service_name}'...")
-                    async with httpx.AsyncClient(timeout=15.0) as client:
+                    async with httpx.AsyncClient(timeout=45.0) as client:
                         resp = await client.post("https://api.openai.com/v1/chat/completions", headers=headers, json=payload)
                         
                         if resp.status_code == 200:
@@ -109,7 +109,7 @@ class LLMClient:
                         else:
                             print(f"[AegisAgent LLM] OpenAI API returned HTTP {resp.status_code} for {target_model}: {resp.text}")
                 except Exception as e:
-                    print(f"[AegisAgent LLM] OpenAI API connection error for {target_model}: {str(e)}")
+                    print(f"[AegisAgent LLM] OpenAI API connection error for {target_model}: {type(e).__name__} - {e or 'Request timed out or connection reset'}")
                     
             print("[AegisAgent LLM] Live API attempts exhausted; engaging local intelligent reasoning engine.")
         else:
